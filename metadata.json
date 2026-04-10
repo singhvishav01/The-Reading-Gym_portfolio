@@ -1,0 +1,88 @@
+{
+  "project_name": "The Reading Gym",
+  "version": "1.0.0",
+  "description": "A gamified social reading tracker built on React Native & Supabase, leveraging Realtime subscriptions to track peer progress dynamically.",
+  "architecture": {
+    "frontend": {
+      "framework": "React Native (Expo SDK 54)",
+      "routing": "Expo Router v3 (File-based routing with deep linking)",
+      "state_management": {
+        "library": "Zustand",
+        "stores": [
+          {
+            "name": "authStore",
+            "capabilities": ["Authentication state syncing", "Profile fetching", "SecureStore JWT persistence"]
+          },
+          {
+            "name": "roomStore",
+            "capabilities": ["Active room context", "Local chapter progress tracking", "Supabase Realtime state mutations"]
+          },
+          {
+            "name": "feedStore",
+            "capabilities": ["Global event feed caching", "Optimistic event rendering"]
+          }
+        ]
+      },
+      "styling": "Constants-driven dynamic StyleSheet (Colors, Spacing, Radii tokens)"
+    },
+    "backend": {
+      "database": "PostgreSQL (via Supabase)",
+      "auth": "Supabase GoTrue (Email/Password & Session Management)",
+      "realtime": "Supabase Realtime (Postgres Changes broadcast)",
+      "schema": {
+        "public.users": "Extended profile data linked to auth.users via foreign key cascade.",
+        "public.books": "Cached book metadata to mitigate Google Books API rate limits.",
+        "public.reading_rooms": "One-to-one mapping with books acting as multiplayer hubs.",
+        "public.reading_progress": "Tracking matrix (user_id x book_id) with unique constraints to map current chapter.",
+        "public.chapter_reactions": "Discrete reaction payload per chapter per user.",
+        "public.feed_events": "Event sourcing table tracking system-wide user actions."
+      },
+      "server_logic": {
+        "triggers": [
+          {
+            "name": "handle_new_user",
+            "event": "AFTER INSERT ON auth.users",
+            "action": "Bypasses RLS to instantiate public.users row with metadata safely."
+          },
+          {
+            "name": "handle_progress_xp",
+            "event": "AFTER INSERT/UPDATE ON public.reading_progress",
+            "action": "Calculates chapter deltas and mathematically increments public.users.xp (+10 per chapter)."
+          }
+        ]
+      }
+    },
+    "external_integrations": {
+      "google_books_api": {
+        "endpoint": "https://www.googleapis.com/books/v1/volumes",
+        "auth": "API Key (Optional)",
+        "behavior": "Search queries pass through dynamic URI encoding; fetching is routed through a debounced React hook."
+      }
+    }
+  },
+  "data_flow": {
+    "room_subscription": "useReadingRoom.ts mounts -> Fetches initial states -> Subscribes to Supabase Postgres 'UPDATE/INSERT' channels -> Receives payload -> Mutates Zustand roomStore -> React triggers UI re-render."
+  },
+  "known_issues_and_limitations": [
+    {
+      "issue": "Google Books API Rate Limiting (429)",
+      "impact": "High. Unauthenticated traffic from the same IP block rapidly triggers Google's quota limits.",
+      "mitigation": "Implemented a mock fallback payload intercept in googleBooks.ts that renders static books if a 429 status is thrown."
+    },
+    {
+      "issue": "Typescript Supabase Join Parsing",
+      "impact": "Low. Supabase JS client types for Foreign Key joins evaluate deeply nested profiles as arrays rather than discrete objects natively.",
+      "mitigation": "Bypassed with `as unknown as Type` cast in profile.tsx to satisfy compiler warnings."
+    },
+    {
+      "issue": "Race Condition on User Creation",
+      "impact": "Resolved. Previously, attempting client-side insert into public.users during signUp violated RLS if email confirmations delayed the JWT token creation.",
+      "mitigation": "Shifted responsibility entirely to a Postgres Database Trigger (handle_new_user) operating securely beyond RLS."
+    },
+    {
+      "issue": "Expo Router Unmounted Renders",
+      "impact": "Resolved. router.replace triggered infinite looping if navigation tree wasn't mounted during auth resolution.",
+      "mitigation": "Guarded by useSegments and useRootNavigationState hooks in _layout.tsx."
+    }
+  ]
+}
