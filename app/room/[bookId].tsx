@@ -60,26 +60,33 @@ export default function ReadingRoomScreen() {
       const gbBook = await getBook(bookId!);
       if (!gbBook) throw new Error('Book not found');
 
-      // 2. Upsert book into DB
-      await supabase.from('books').upsert(
-        {
+      // 2. Insert book into DB if not exists
+      const { data: existingBook } = await supabase.from('books').select('id').eq('id', gbBook.id).maybeSingle();
+      if (!existingBook) {
+        await supabase.from('books').insert({
           id: gbBook.id,
           title: gbBook.title,
           author: gbBook.author,
           cover_url: gbBook.cover,
           description: gbBook.description,
-        },
-        { onConflict: 'id' }
-      );
+        });
+      }
 
-      // 3. Upsert reading room
-      const { data: roomData, error: roomError } = await supabase
-        .from('reading_rooms')
-        .upsert({ book_id: gbBook.id }, { onConflict: 'book_id' })
-        .select()
-        .single();
-
-      if (roomError || !roomData) throw new Error('Could not load room');
+      // 3. Load or create reading room
+      let roomData;
+      const { data: existingRoom } = await supabase.from('reading_rooms').select('*').eq('book_id', gbBook.id).maybeSingle();
+      
+      if (existingRoom) {
+        roomData = existingRoom;
+      } else {
+        const { data: newRoom, error: roomError } = await supabase
+          .from('reading_rooms')
+          .insert({ book_id: gbBook.id })
+          .select()
+          .single();
+        if (roomError || !newRoom) throw new Error('Could not create room');
+        roomData = newRoom;
+      }
       setRoom(roomData.id, {
         id: gbBook.id,
         title: gbBook.title,

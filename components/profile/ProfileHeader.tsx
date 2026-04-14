@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Radii, FontSize, FontWeight, Spacing } from '../../lib/constants';
 import type { AppUser } from '../../stores/authStore';
 
@@ -44,7 +45,12 @@ export function ProfileHeader({ user, booksReading, onSignOut }: ProfileHeaderPr
           <Text style={styles.xpNextLabel}>{100 - xpInLevel} to next level</Text>
         </View>
         <View style={styles.xpBarBg}>
-          <View style={[styles.xpBarFill, { width: `${xpInLevel}%` }]} />
+          <LinearGradient
+            colors={Colors.xpGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.xpBarFill, { width: `${xpInLevel}%` }]}
+          />
         </View>
       </View>
 
@@ -153,7 +159,6 @@ const styles = StyleSheet.create({
   xpBarFill: {
     height: '100%',
     borderRadius: 3,
-    backgroundColor: Colors.gold,
   },
   statsRow: {
     flexDirection: 'row',

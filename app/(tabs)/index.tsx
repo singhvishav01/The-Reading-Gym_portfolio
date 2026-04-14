@@ -6,11 +6,14 @@ import {
   RefreshControl,
   StyleSheet,
   SafeAreaView,
+  TouchableOpacity,
 } from 'react-native';
 import { Colors, Spacing, FontSize, FontWeight } from '../../lib/constants';
 import { useFeed } from '../../hooks/useFeed';
 import { FeedEventCard } from '../../components/feed/FeedEventCard';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { CreatePostModal } from '../../components/feed/CreatePostModal';
+import { Ionicons } from '@expo/vector-icons';
 import type { FeedEvent } from '../../stores/feedStore';
 
 function EmptyFeed() {
@@ -27,6 +30,7 @@ function EmptyFeed() {
 
 export default function FeedScreen() {
   const { events, loading, refreshing, refresh } = useFeed();
+  const [composeVisible, setComposeVisible] = React.useState(false);
 
   if (loading) {
     return (
@@ -58,6 +62,22 @@ export default function FeedScreen() {
         }
         contentContainerStyle={events.length === 0 ? styles.emptyContainer : styles.listContent}
         showsVerticalScrollIndicator={false}
+      />
+
+      <TouchableOpacity 
+        style={styles.fab} 
+        activeOpacity={0.8}
+        onPress={() => setComposeVisible(true)}
+      >
+        <Ionicons name="add" size={32} color="#fff" />
+      </TouchableOpacity>
+
+      <CreatePostModal
+        visible={composeVisible}
+        onClose={() => setComposeVisible(false)}
+        onPostSuccess={() => {
+          refresh(); // fetch feed again so the new post appears
+        }}
       />
     </SafeAreaView>
   );
@@ -119,5 +139,21 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: Spacing.xl,
+    right: Spacing.lg,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });

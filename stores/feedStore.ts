@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 export interface FeedEvent {
   id: string;
   user_id: string;
-  event_type: 'chapter_progress' | 'room_joined' | 'chapter_reaction';
+  event_type: 'chapter_progress' | 'room_joined' | 'chapter_reaction' | 'book_completed' | 'user_post';
   book_id: string | null;
   metadata: Record<string, any>;
   created_at: string;

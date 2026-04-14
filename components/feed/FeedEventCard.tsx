@@ -22,6 +22,8 @@ function EventIcon({ type }: { type: FeedEvent['event_type'] }) {
     chapter_progress: '📖',
     room_joined: '🚪',
     chapter_reaction: '💬',
+    book_completed: '🏆',
+    user_post: '📸',
   };
   return <Text style={styles.icon}>{icons[type]}</Text>;
 }
@@ -42,6 +44,8 @@ function buildMessage(event: FeedEvent): string {
       const ch = event.metadata?.chapter_number;
       return `${user} reacted ${emoji} to Chapter ${ch} of ${title}`;
     }
+    case 'book_completed':
+      return `${user} just finished reading ${title}! 🎉`;
     default:
       return `${user} did something in ${title}`;
   }
@@ -51,6 +55,51 @@ export function FeedEventCard({ event }: FeedEventCardProps) {
   const avatarUrl = event.users?.avatar_url;
   const username = event.users?.username ?? '?';
   const initials = username.slice(0, 2).toUpperCase();
+
+  if (event.event_type === 'user_post') {
+    const postImageUrl = event.metadata?.image_url ?? event.metadata?.book_cover ?? event.books?.cover_url;
+    
+    return (
+      <View style={styles.igCard}>
+        <View style={styles.igHeader}>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.igAvatar} />
+          ) : (
+            <View style={[styles.igAvatar, styles.avatarFallback]}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+          )}
+          <View>
+            <Text style={styles.igUsername}>{username}</Text>
+            {event.metadata?.book_title && (
+              <Text style={styles.igSubtitle}>Reading {event.metadata.book_title}</Text>
+            )}
+          </View>
+          <Text style={styles.igTime}>{timeAgo(event.created_at)}</Text>
+        </View>
+        
+        {postImageUrl ? (
+          <Image 
+            source={{ uri: postImageUrl }} 
+            style={styles.igImage} 
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.igImage, styles.igImageFallback]}>
+             <Text style={styles.emptyEmoji}>📚</Text>
+          </View>
+        )}
+        
+        <View style={styles.igFooter}>
+          {event.metadata?.caption ? (
+            <Text style={styles.igCaption}>
+              <Text style={styles.igUsernameInline}>{username}</Text> {event.metadata.caption}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.card}>
@@ -152,5 +201,65 @@ const styles = StyleSheet.create({
   time: {
     color: Colors.textMuted,
     fontSize: FontSize.xs,
+  },
+  igCard: {
+    backgroundColor: Colors.surface,
+    marginBottom: Spacing.xl,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: Colors.surfaceBorder,
+    paddingVertical: Spacing.sm,
+  },
+  igHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  igAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  igUsername: {
+    color: Colors.text,
+    fontSize: FontSize.sm,
+    fontWeight: 'bold',
+  },
+  igSubtitle: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.xs,
+    marginTop: 2,
+  },
+  igTime: {
+    color: Colors.textMuted,
+    fontSize: FontSize.xs,
+    marginLeft: 'auto',
+  },
+  igImage: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: Colors.bg,
+  },
+  igImageFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyEmoji: {
+    fontSize: 64,
+  },
+  igFooter: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+  },
+  igCaption: {
+    color: Colors.text,
+    fontSize: FontSize.md,
+    lineHeight: 22,
+  },
+  igUsernameInline: {
+    fontWeight: 'bold',
+    color: Colors.text,
   },
 });

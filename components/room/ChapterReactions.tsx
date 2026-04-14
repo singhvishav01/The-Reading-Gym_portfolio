@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Colors, Radii, FontSize, FontWeight, Spacing, REACTIONS } from '../../lib/constants';
+import { Colors, Radii, FontSize, FontWeight, Spacing, REACTIONS, CHIP_COLORS, ReactionType } from '../../lib/constants';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import { useRoomStore } from '../../stores/roomStore';
@@ -128,25 +128,35 @@ export function ChapterReactions({ bookId }: ChapterReactionsProps) {
           const active = myReaction(r.type);
           const count = reactionCount(r.type);
           const isSaving = saving === r.type;
+          const customColor = CHIP_COLORS[r.type as ReactionType];
 
           return (
             <TouchableOpacity
               key={r.type}
-              style={[styles.reactionBtn, active && styles.reactionBtnActive]}
+              style={[
+                styles.reactionBtn, 
+                active && { backgroundColor: customColor + '25', borderColor: customColor }
+              ]}
               onPress={() => toggleReaction(r.type, r.emoji)}
               disabled={!!saving}
               activeOpacity={0.75}
             >
               {isSaving ? (
-                <ActivityIndicator size="small" color={Colors.accent} />
+                <ActivityIndicator size="small" color={customColor} />
               ) : (
                 <Text style={styles.reactionEmoji}>{r.emoji}</Text>
               )}
-              <Text style={[styles.reactionLabel, active && styles.reactionLabelActive]}>
+              <Text style={[
+                styles.reactionLabel, 
+                active && { color: customColor, fontWeight: FontWeight.semibold }
+              ]}>
                 {r.label}
               </Text>
               {count > 0 && (
-                <View style={[styles.countBadge, active && styles.countBadgeActive]}>
+                <View style={[
+                  styles.countBadge, 
+                  active && { backgroundColor: customColor }
+                ]}>
                   <Text style={[styles.countText, active && styles.countTextActive]}>
                     {count}
                   </Text>
@@ -221,10 +231,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     minWidth: 60,
   },
-  reactionBtnActive: {
-    backgroundColor: Colors.accentDim,
-    borderColor: Colors.accent,
-  },
   reactionEmoji: {
     fontSize: 18,
   },
@@ -232,10 +238,6 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
-  },
-  reactionLabelActive: {
-    color: Colors.accent,
-    fontWeight: FontWeight.semibold,
   },
   countBadge: {
     backgroundColor: Colors.surfaceBorder,
@@ -245,9 +247,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
-  },
-  countBadgeActive: {
-    backgroundColor: Colors.accent,
   },
   countText: {
     color: Colors.textMuted,

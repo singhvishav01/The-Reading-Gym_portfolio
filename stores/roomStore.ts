@@ -7,6 +7,7 @@ export interface ReaderProgress {
   room_id: string;
   book_id: string;
   current_chapter: number;
+  is_completed: boolean;
   updated_at: string;
   users: {
     username: string;

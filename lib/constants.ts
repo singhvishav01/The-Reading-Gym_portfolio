@@ -1,44 +1,73 @@
 // Design system tokens for The Reading Gym
-// Dark-mode first, premium aesthetic
+// Carnival theme - fire orange x gold x hot pink
+
+const CarnivalPalette = {
+  bg: {
+    base:    '#16060a',
+    surface: '#2a0d10',
+    card:    'rgba(232,83,26,0.13)',
+  },
+  accent: {
+    fire:   '#e8531a',
+    gold:   '#f0b429',
+    pink:   '#d4537e',
+  },
+  text: {
+    primary:   '#faf7f2',
+    fire:      '#ff9d6e',
+    gold:      '#ffd97d',
+    pink:      '#ed93b1',
+    muted:     'rgba(250,247,242,0.45)',
+  },
+  border: {
+    fire:   'rgba(232,83,26,0.4)',
+    gold:   'rgba(240,180,41,0.35)',
+    pink:   'rgba(212,83,126,0.35)',
+  },
+  xpGradient: ['#e8531a', '#f0b429', '#d4537e'] as const,
+  statColors: ['fire', 'gold', 'pink'],
+};
 
 export const Colors = {
+  ...CarnivalPalette, // for new components
+  
   // Backgrounds
-  bg: '#0D0F14',
-  surface: '#13161E',
-  surfaceRaised: '#1A1E2A',
-  surfaceBorder: '#252A3A',
+  bg: CarnivalPalette.bg.base,
+  surface: CarnivalPalette.bg.surface,
+  surfaceRaised: CarnivalPalette.bg.card,
+  surfaceBorder: CarnivalPalette.border.fire,
 
   // Accent / Brand
-  accent: '#7B68EE',        // medium slate purple
-  accentLight: '#9B8FFF',
-  accentDim: 'rgba(123,104,238,0.15)',
-  accentGlow: 'rgba(123,104,238,0.35)',
+  accent: CarnivalPalette.accent.fire,
+  accentLight: CarnivalPalette.accent.gold,
+  accentDim: 'rgba(232,83,26,0.15)',
+  accentGlow: 'rgba(232,83,26,0.35)',
 
   // Gold for XP / streaks
-  gold: '#F5A623',
-  goldDim: 'rgba(245,166,35,0.15)',
+  gold: CarnivalPalette.accent.gold,
+  goldDim: 'rgba(240,180,41,0.15)',
 
   // Semantic
   success: '#4ADE80',
   successDim: 'rgba(74,222,128,0.15)',
-  danger: '#F87171',
-  dangerDim: 'rgba(248,113,113,0.15)',
-  warning: '#FBBF24',
+  danger: CarnivalPalette.accent.pink,
+  dangerDim: 'rgba(212,83,126,0.15)',
+  warning: CarnivalPalette.accent.gold,
 
   // Text
-  text: '#F0F2F8',
-  textSecondary: '#A0A5BE',
-  textMuted: '#606580',
-  textDisabled: '#3A3F55',
+  text: CarnivalPalette.text.primary,
+  textSecondary: CarnivalPalette.text.muted,
+  textMuted: CarnivalPalette.text.muted,
+  textDisabled: 'rgba(250,247,242,0.25)',
 
   // Intensity colors (for spoiler-safe reactions)
-  intensityStrong: '#F87171',    // red-ish
-  intensityModerate: '#FBBF24',  // amber
-  intensityMild: '#60A5FA',      // blue
+  intensityStrong: CarnivalPalette.accent.fire,
+  intensityModerate: CarnivalPalette.accent.pink,
+  intensityMild: CarnivalPalette.accent.gold,
 
   // Tab bar
-  tabActive: '#7B68EE',
-  tabInactive: '#606580',
+  tabActive: CarnivalPalette.accent.fire,
+  tabInactive: CarnivalPalette.text.muted,
 };
 
 export const Spacing = {
@@ -79,11 +108,9 @@ export const FontWeight = {
 
 // Reaction types and their properties
 export const REACTIONS = [
-  { type: 'plot_twist',  emoji: '😱', label: 'Plot Twist',    intensity: 'strong' },
-  { type: 'mind_blown',  emoji: '🤯', label: 'Mind Blown',    intensity: 'strong' },
-  { type: 'emotional',   emoji: '😭', label: 'Emotional',     intensity: 'moderate' },
-  { type: 'suspicious',  emoji: '🕵️', label: 'Suspicious',    intensity: 'mild' },
-  { type: 'favorite',    emoji: '🔥', label: 'Favorite Scene', intensity: 'mild' },
+  { type: 'twist',     emoji: '😱', label: 'Plot Twist',    intensity: 'strong' },
+  { type: 'favorite',  emoji: '🔥', label: 'Favorite Scene', intensity: 'mild' },
+  { type: 'emotional', emoji: '😭', label: 'Emotional',     intensity: 'moderate' },
 ] as const;
 
 export type ReactionType = typeof REACTIONS[number]['type'];
@@ -95,8 +122,9 @@ export const INTENSITY_LABELS: Record<ReactionIntensity, string> = {
   mild:     'Notable',
 };
 
-export const INTENSITY_COLORS: Record<ReactionIntensity, string> = {
-  strong:   Colors.intensityStrong,
-  moderate: Colors.intensityModerate,
-  mild:     Colors.intensityMild,
+// Map the new chip colors as requested by the user
+export const CHIP_COLORS: Record<ReactionType, string> = {
+  twist:     CarnivalPalette.accent.fire,
+  favorite:  CarnivalPalette.accent.gold,
+  emotional: CarnivalPalette.accent.pink,
 };
