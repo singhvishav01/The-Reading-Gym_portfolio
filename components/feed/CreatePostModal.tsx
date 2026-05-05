@@ -29,6 +29,8 @@ interface Props {
 
 interface TrackedBook {
   book_id: string;
+  current_chapter: number;
+  status: string;
   books: {
     title: string;
     cover_url: string;
@@ -41,8 +43,10 @@ export function CreatePostModal({ visible, onClose, onPostSuccess }: Props) {
   const [caption, setCaption] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
-  const [selectedBookIndex, setSelectedBookIndex] = useState<number>(0);
+  const [selectedBookIndex, setSelectedBookIndex] = useState<number | null>(null);
   const [trackedBooks, setTrackedBooks] = useState<TrackedBook[]>([]);
+  const [milestoneType, setMilestoneType] = useState<string | null>(null);
+  const [milestoneText, setMilestoneText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -53,7 +57,9 @@ export function CreatePostModal({ visible, onClose, onPostSuccess }: Props) {
       setCaption('');
       setImageUri(null);
       setImageBase64(null);
-      setSelectedBookIndex(0);
+      setSelectedBookIndex(null);
+      setMilestoneType(null);
+      setMilestoneText(null);
     }
   }, [visible, session]);
 
@@ -61,7 +67,7 @@ export function CreatePostModal({ visible, onClose, onPostSuccess }: Props) {
     if (!session) return;
     const { data, error } = await supabase
       .from('reading_progress')
-      .select('book_id, books(title, cover_url, author)')
+      .select('book_id, current_chapter, status, books(title, cover_url, author)')
       .eq('user_id', session.user.id)
       .order('updated_at', { ascending: false });
 
@@ -86,59 +92,78 @@ export function CreatePostModal({ visible, onClose, onPostSuccess }: Props) {
   }
 
   async function handleSubmit() {
-    if (!session) return;
-    const book = trackedBooks[selectedBookIndex];
-    if (!book) {
-      Alert.alert('Error', 'Please select a book you are reading first.');
+    if (!session) {
+      Alert.alert('Auth Error', 'You must be logged in to post.');
+      return;
+    }
+
+    // Must have at least a caption or an image
+    if (!caption.trim() && !imageBase64) {
+      Alert.alert('Empty Post', 'Write something or add a photo!');
       return;
     }
 
     setLoading(true);
 
-    let finalImageUrl: string | undefined = undefined;
+    try {
+      let finalImageUrl: string | undefined = undefined;
 
-    // Upload custom image if provided
-    if (imageBase64) {
-      const fileName = `${session.user.id}/${Date.now()}.jpg`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('feed_images')
-        .upload(fileName, decode(imageBase64), { contentType: 'image/jpeg' });
+      // Upload custom image if provided
+      if (imageBase64) {
+        const fileName = `${session.user.id}/${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('feed_images')
+          .upload(fileName, decode(imageBase64), { contentType: 'image/jpeg' });
 
-      if (uploadError) {
-        Alert.alert('Upload Error', uploadError.message);
-        setLoading(false);
-        return;
+        if (uploadError) {
+          Alert.alert('Upload Error', uploadError.message);
+          setLoading(false);
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('feed_images')
+          .getPublicUrl(fileName);
+
+        finalImageUrl = publicUrlData.publicUrl;
       }
 
-      const { data: publicUrlData } = supabase.storage
-        .from('feed_images')
-        .getPublicUrl(fileName);
-      
-      finalImageUrl = publicUrlData.publicUrl;
-    }
+      // Book is now optional
+      const selectedBook = selectedBookIndex !== null ? trackedBooks[selectedBookIndex] : null;
+      const bookTitle = selectedBook?.books?.title || null;
+      const bookCover = selectedBook?.books?.cover_url || null;
+      const bookId = selectedBook?.book_id || null;
 
-    // Insert feed event
-    const { error } = await supabase.from('feed_events').insert({
-      user_id: session.user.id,
-      event_type: 'user_post',
-      book_id: book.book_id,
-      metadata: {
-        caption: caption.trim(),
-        book_title: book.books.title,
-        book_cover: book.books.cover_url,
-        image_url: finalImageUrl, // undefined if no custom photo uploaded
-      },
-    });
+      // Insert feed event
+      const { error } = await supabase.from('feed_events').insert({
+        user_id: session.user.id,
+        event_type: 'user_post',
+        book_id: bookId,
+        metadata: {
+          caption: caption.trim(),
+          book_title: bookTitle,
+          book_cover: bookCover,
+          image_url: finalImageUrl,
+          milestone_type: milestoneType,
+          milestone_text: milestoneText,
+        },
+      });
 
-    setLoading(false);
+      setLoading(false);
 
-    if (error) {
-      Alert.alert('Failed to post', error.message);
-    } else {
-      onPostSuccess();
-      onClose();
+      if (error) {
+        Alert.alert('Failed to post', error.message);
+      } else {
+        onPostSuccess();
+        onClose();
+      }
+    } catch (e: any) {
+      setLoading(false);
+      Alert.alert('System Error', e.message || String(e));
     }
   }
+
+  const selectedBook = selectedBookIndex !== null ? trackedBooks[selectedBookIndex] : null;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -148,60 +173,104 @@ export function CreatePostModal({ visible, onClose, onPostSuccess }: Props) {
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.title}>New Post</Text>
-          <TouchableOpacity onPress={handleSubmit} disabled={loading || trackedBooks.length === 0} style={styles.headerBtn}>
+          <TouchableOpacity onPress={handleSubmit} disabled={loading} style={styles.headerBtn}>
             {loading ? (
               <ActivityIndicator color={Colors.accent} size="small" />
             ) : (
-              <Text style={[styles.postText, trackedBooks.length === 0 && { color: Colors.textMuted }]}>Share</Text>
+              <Text style={styles.postText}>Share</Text>
             )}
           </TouchableOpacity>
         </View>
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            
-            {trackedBooks.length === 0 ? (
-              <View style={styles.emptyBooks}>
-                <Text style={styles.emptyEmoji}>📚</Text>
-                <Text style={styles.emptyText}>You need to track at least one book to make a post!</Text>
-              </View>
-            ) : (
-              <>
-                <TextInput
-                  style={styles.captionInput}
-                  placeholder="Share a quote or thought..."
-                  placeholderTextColor={Colors.textMuted}
-                  multiline
-                  autoFocus
-                  maxLength={500}
-                  value={caption}
-                  onChangeText={setCaption}
-                />
 
-                <View style={styles.mediaSection}>
-                  {imageUri ? (
-                    <View style={styles.imageContainer}>
-                      <Image source={{ uri: imageUri }} style={styles.previewImage} />
-                      <TouchableOpacity style={styles.removeImageBtn} onPress={() => { setImageUri(null); setImageBase64(null); }}>
-                        <Ionicons name="close-circle" size={28} color={Colors.surface} />
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <TouchableOpacity style={styles.uploadBtn} onPress={pickImage} activeOpacity={0.7}>
-                      <Ionicons name="camera" size={32} color={Colors.accent} />
-                      <Text style={styles.uploadBtnText}>Add a Photo</Text>
-                      <Text style={styles.uploadBtnSub}>(or we'll just show the book's cover)</Text>
+            {/* Caption Input */}
+            <TextInput
+              style={styles.captionInput}
+              placeholder="Share a quote, thought, or update..."
+              placeholderTextColor={Colors.textMuted}
+              multiline
+              autoFocus
+              maxLength={500}
+              value={caption}
+              onChangeText={setCaption}
+            />
+
+            {/* Milestone Chips (only if a book is selected) */}
+            {selectedBook && (
+              <View style={styles.chipsRow}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {selectedBook.current_chapter === 0 && (
+                    <TouchableOpacity
+                      style={[styles.chip, milestoneType === 'started' && styles.chipActive]}
+                      onPress={() => { setMilestoneType('started'); setMilestoneText('Just started reading!'); }}
+                    >
+                      <Text style={[styles.chipText, milestoneType === 'started' && styles.chipTextActive]}>📖 Just Started</Text>
                     </TouchableOpacity>
                   )}
-                </View>
+                  {selectedBook.current_chapter > 0 && (
+                    <TouchableOpacity
+                      style={[styles.chip, milestoneType === 'chapter' && styles.chipActive]}
+                      onPress={() => { setMilestoneType('chapter'); setMilestoneText(`Reached Chapter ${selectedBook.current_chapter}`); }}
+                    >
+                      <Text style={[styles.chipText, milestoneType === 'chapter' && styles.chipTextActive]}>🔖 Chapter {selectedBook.current_chapter}</Text>
+                    </TouchableOpacity>
+                  )}
+                  {selectedBook.status === 'completed' && (
+                    <TouchableOpacity
+                      style={[styles.chip, milestoneType === 'completed' && styles.chipActive]}
+                      onPress={() => { setMilestoneType('completed'); setMilestoneText('Finished this masterpiece!'); }}
+                    >
+                      <Text style={[styles.chipText, milestoneType === 'completed' && styles.chipTextActive]}>🏆 Finished</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={[styles.chip, !milestoneType && styles.chipActive]}
+                    onPress={() => { setMilestoneType(null); setMilestoneText(null); }}
+                  >
+                    <Text style={[styles.chipText, !milestoneType && styles.chipTextActive]}>📝 Note</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            )}
 
-                <Text style={styles.sectionLabel}>About Which Book?</Text>
+            {/* Photo */}
+            <View style={styles.mediaSection}>
+              {imageUri ? (
+                <View style={styles.imageContainer}>
+                  <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                  <TouchableOpacity style={styles.removeImageBtn} onPress={() => { setImageUri(null); setImageBase64(null); }}>
+                    <Ionicons name="close-circle" size={28} color={Colors.surface} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.uploadBtn} onPress={pickImage} activeOpacity={0.7}>
+                  <Ionicons name="camera" size={32} color={Colors.accent} />
+                  <Text style={styles.uploadBtnText}>Add a Photo</Text>
+                  <Text style={styles.uploadBtnSub}>(optional)</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Book Selector (optional) */}
+            {trackedBooks.length > 0 && (
+              <>
+                <Text style={styles.sectionLabel}>Tag a Book (optional)</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bookSelector}>
+                  <TouchableOpacity
+                    style={[styles.bookPill, selectedBookIndex === null && styles.bookPillSelected]}
+                    onPress={() => { setSelectedBookIndex(null); setMilestoneType(null); setMilestoneText(null); }}
+                  >
+                    <Text style={[styles.pillTitle, selectedBookIndex === null && { color: Colors.surface }]}>
+                      No Book
+                    </Text>
+                  </TouchableOpacity>
                   {trackedBooks.map((item, idx) => {
                     const isSelected = selectedBookIndex === idx;
                     return (
-                      <TouchableOpacity 
-                        key={item.book_id} 
+                      <TouchableOpacity
+                        key={item.book_id}
                         style={[styles.bookPill, isSelected && styles.bookPillSelected]}
                         onPress={() => setSelectedBookIndex(idx)}
                       >
@@ -268,12 +337,37 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
+  chipsRow: {
+    marginTop: -Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  chip: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.surfaceBorder,
+    borderRadius: Radii.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
+    marginRight: Spacing.sm,
+  },
+  chipActive: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  chipText: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+  },
+  chipTextActive: {
+    color: '#fff',
+  },
   mediaSection: {
     alignItems: 'center',
   },
   uploadBtn: {
     width: '100%',
-    aspectRatio: 1,
+    aspectRatio: 2, // shorter rectangle instead of full square
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.surfaceBorder,
@@ -346,21 +440,5 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: '500',
     flexShrink: 1,
-  },
-  emptyBooks: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.xl,
-    gap: Spacing.md,
-    marginTop: 40,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-  },
-  emptyText: {
-    color: Colors.textMuted,
-    fontSize: FontSize.md,
-    textAlign: 'center',
-    lineHeight: 22,
   },
 });

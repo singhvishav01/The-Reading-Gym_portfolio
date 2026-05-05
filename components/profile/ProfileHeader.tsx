@@ -7,10 +7,12 @@ import type { AppUser } from '../../stores/authStore';
 interface ProfileHeaderProps {
   user: AppUser;
   booksReading: number;
+  friendCount: number;
   onSignOut: () => void;
+  onEditProfile: () => void;
 }
 
-export function ProfileHeader({ user, booksReading, onSignOut }: ProfileHeaderProps) {
+export function ProfileHeader({ user, booksReading, friendCount, onSignOut, onEditProfile }: ProfileHeaderProps) {
   const initials = user.username.slice(0, 2).toUpperCase();
   const xp = user.xp;
   const level = Math.floor(xp / 100) + 1;
@@ -34,9 +36,31 @@ export function ProfileHeader({ user, booksReading, onSignOut }: ProfileHeaderPr
 
       {/* Username */}
       <Text style={styles.username}>{user.username}</Text>
+
+      {/* Bio */}
+      {user.bio ? (
+        <Text style={styles.bioText}>{user.bio}</Text>
+      ) : null}
+
+      {/* Interests */}
+      {user.interests && user.interests.length > 0 && (
+        <View style={styles.interestsRow}>
+          {user.interests.map((interest) => (
+            <View key={interest} style={styles.interestChip}>
+              <Text style={styles.interestText}>{interest}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       <Text style={styles.joinDate}>
         Member since {new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
       </Text>
+
+      {/* Edit Profile Button */}
+      <TouchableOpacity style={styles.editBtn} onPress={onEditProfile} activeOpacity={0.7}>
+        <Text style={styles.editBtnText}>Edit Profile</Text>
+      </TouchableOpacity>
 
       {/* XP Bar */}
       <View style={styles.xpSection}>
@@ -62,13 +86,18 @@ export function ProfileHeader({ user, booksReading, onSignOut }: ProfileHeaderPr
         </View>
         <View style={styles.statDivider} />
         <View style={styles.stat}>
+          <Text style={styles.statNum}>{friendCount}</Text>
+          <Text style={styles.statLabel}>Friends</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.stat}>
           <Text style={styles.statNum}>{xp}</Text>
           <Text style={styles.statLabel}>XP</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.stat}>
           <Text style={styles.statNum}>{user.streak_days}</Text>
-          <Text style={styles.statLabel}>Day Streak 🔥</Text>
+          <Text style={styles.statLabel}>Streak 🔥</Text>
         </View>
       </View>
 
@@ -128,9 +157,50 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
   },
+  bioText: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.md,
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: Spacing.md,
+  },
+  interestsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  interestChip: {
+    backgroundColor: Colors.accentDim,
+    borderRadius: Radii.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: Colors.accent + '40',
+  },
+  interestText: {
+    color: Colors.accent,
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+  },
   joinDate: {
     color: Colors.textMuted,
     fontSize: FontSize.sm,
+  },
+  editBtn: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    borderColor: Colors.surfaceBorder,
+    backgroundColor: Colors.surface,
+    marginTop: Spacing.xs,
+  },
+  editBtnText: {
+    color: Colors.text,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
   },
   xpSection: {
     width: '100%',
@@ -178,7 +248,7 @@ const styles = StyleSheet.create({
   },
   statNum: {
     color: Colors.text,
-    fontSize: FontSize.xl,
+    fontSize: FontSize.lg,
     fontWeight: FontWeight.extrabold,
   },
   statLabel: {

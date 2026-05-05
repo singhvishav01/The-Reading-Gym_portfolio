@@ -5,8 +5,8 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import { Colors, Spacing, FontSize, FontWeight } from '../../lib/constants';
 import { useFeed } from '../../hooks/useFeed';
@@ -31,6 +31,8 @@ function EmptyFeed() {
 export default function FeedScreen() {
   const { events, loading, refreshing, refresh } = useFeed();
   const [composeVisible, setComposeVisible] = React.useState(false);
+  const { height } = useWindowDimensions();
+  const CARD_HEIGHT = height - 85; // tab bar
 
   if (loading) {
     return (
@@ -41,16 +43,11 @@ export default function FeedScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.root}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>📚 The Reading Gym</Text>
-        <Text style={styles.headerSub}>What your friends are reading</Text>
-      </View>
-
+    <View style={styles.root}>
       <FlatList
         data={events}
         keyExtractor={(item: FeedEvent) => item.id}
-        renderItem={({ item }) => <FeedEventCard event={item} />}
+        renderItem={({ item }) => <FeedEventCard event={item} cardHeight={CARD_HEIGHT} />}
         ListEmptyComponent={<EmptyFeed />}
         refreshControl={
           <RefreshControl
@@ -58,14 +55,19 @@ export default function FeedScreen() {
             onRefresh={refresh}
             tintColor={Colors.accent}
             colors={[Colors.accent]}
+            progressViewOffset={50}
           />
         }
-        contentContainerStyle={events.length === 0 ? styles.emptyContainer : styles.listContent}
+        contentContainerStyle={events.length === 0 ? styles.emptyContainer : undefined}
         showsVerticalScrollIndicator={false}
+        pagingEnabled
+        snapToInterval={CARD_HEIGHT}
+        snapToAlignment="start"
+        decelerationRate="fast"
       />
 
-      <TouchableOpacity 
-        style={styles.fab} 
+      <TouchableOpacity
+        style={styles.fab}
         activeOpacity={0.8}
         onPress={() => setComposeVisible(true)}
       >
@@ -76,17 +78,17 @@ export default function FeedScreen() {
         visible={composeVisible}
         onClose={() => setComposeVisible(false)}
         onPostSuccess={() => {
-          refresh(); // fetch feed again so the new post appears
+          refresh();
         }}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.bg,
+    backgroundColor: '#000',
   },
   loadingContainer: {
     flex: 1,
@@ -94,29 +96,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  header: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.surfaceBorder,
-  },
-  headerTitle: {
-    color: Colors.text,
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.extrabold,
-  },
-  headerSub: {
-    color: Colors.textMuted,
-    fontSize: FontSize.xs,
-    marginTop: 2,
-  },
-  listContent: {
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.xxl,
-  },
   emptyContainer: {
     flexGrow: 1,
+    backgroundColor: Colors.bg,
   },
   empty: {
     flex: 1,
@@ -155,5 +137,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 8,
     elevation: 8,
+    zIndex: 10,
   },
 });

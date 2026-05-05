@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import type { Session, User } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 
 export interface AppUser {
   id: string;
   username: string;
   avatar_url: string | null;
+  bio: string;
+  interests: string[];
   xp: number;
   streak_days: number;
   created_at: string;
@@ -18,6 +20,7 @@ interface AuthState {
   setSession: (session: Session | null) => void;
   setAppUser: (user: AppUser | null) => void;
   fetchAppUser: (userId: string) => Promise<void>;
+  updateProfile: (updates: Partial<Pick<AppUser, 'username' | 'avatar_url' | 'bio' | 'interests'>>) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -37,6 +40,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       .eq('id', userId)
       .single();
     if (!error && data) set({ appUser: data as AppUser });
+  },
+
+  updateProfile: async (updates) => {
+    const { session, appUser } = get();
+    if (!session || !appUser) return;
+
+    const { error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', session.user.id);
+
+    if (!error) {
+      set({ appUser: { ...appUser, ...updates } });
+    }
   },
 
   signOut: async () => {
