@@ -10,6 +10,7 @@ export interface AppUser {
   interests: string[];
   xp: number;
   streak_days: number;
+  last_read_at: string | null;
   created_at: string;
 }
 

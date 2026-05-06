@@ -62,6 +62,7 @@ export default function DiscoverScreen() {
         const { data } = await supabase
           .from('reading_progress')
           .select('book_id, books(title, cover_url, author)')
+          .neq('user_id', session?.user.id ?? '')
           .order('updated_at', { ascending: false })
           .limit(10);
 
@@ -171,7 +172,7 @@ export default function DiscoverScreen() {
   }
 
   const handleBookPress = useCallback((book: GoogleBook) => {
-    router.push(`/room/${book.id}`);
+    router.push(`/book/${book.id}`);
   }, []);
 
   return (

@@ -12,9 +12,9 @@ export async function generateBookQuiz(title: string, author: string): Promise<Q
     return null;
   }
 
-  const prompt = `You are a literature expert. Generate a 7-question multiple-choice quiz about the book "${title}" by ${author}. 
-The questions should test basic reading comprehension and plot knowledge to prove the user actually read it.
-Return ONLY a raw JSON array. DO NOT wrap it in markdown block quotes. The array must contain exactly 7 objects with this exact structure:
+  const prompt = `You are a literature expert. Generate a 10-question multiple-choice quiz about the book "${title}" by ${author}.
+The questions should test genuine reading comprehension — plot events, character motivations, themes, and key scenes — to verify the user actually read it. Mix easy and challenging questions.
+Return ONLY a raw JSON array. DO NOT wrap it in markdown block quotes. The array must contain exactly 10 objects with this exact structure:
 [{ "question": "Question text here?", "options": ["A", "B", "C", "D"], "correctIndex": 1 }]`;
 
   try {

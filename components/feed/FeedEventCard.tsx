@@ -11,329 +11,353 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Radii, FontSize, FontWeight, Spacing } from '../../lib/constants';
 import type { FeedEvent } from '../../stores/feedStore';
 
-interface FeedEventCardProps {
-  event: FeedEvent;
-  cardHeight: number;
-}
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
 }
 
-function buildMessage(event: FeedEvent): string {
-  const user = event.users?.username ?? 'Someone';
+function buildActivityText(event: FeedEvent): string {
   const title = event.books?.title ?? event.metadata?.book_title ?? 'a book';
-
   switch (event.event_type) {
-    case 'chapter_progress': {
-      const ch = event.metadata?.chapter_number;
-      return `${user} reached Chapter ${ch} of ${title}`;
-    }
+    case 'chapter_progress':
+      return `reached Chapter ${event.metadata?.chapter_number} of "${title}"`;
     case 'room_joined':
-      return `${user} joined the reading room for ${title}`;
+      return `joined the reading room for "${title}"`;
     case 'chapter_reaction': {
       const emoji = event.metadata?.reaction_emoji ?? '❤️';
-      const ch = event.metadata?.chapter_number;
-      return `${user} reacted ${emoji} to Chapter ${ch} of ${title}`;
+      return `reacted ${emoji} to Chapter ${event.metadata?.chapter_number} of "${title}"`;
     }
     case 'book_completed':
-      return `${user} just finished reading ${title}! 🎉`;
+      return `finished reading "${title}" 🎉`;
     default:
-      return `${user} did something in ${title}`;
+      return `did something with "${title}"`;
   }
 }
 
-function EventEmoji({ type }: { type: FeedEvent['event_type'] }) {
-  const icons: Record<FeedEvent['event_type'], string> = {
-    chapter_progress: '📖',
-    room_joined: '🚪',
-    chapter_reaction: '💬',
-    book_completed: '🏆',
-    user_post: '📸',
-  };
-  return <Text style={{ fontSize: 22 }}>{icons[type]}</Text>;
+// Colour per event type
+const EVENT_COLOR: Record<FeedEvent['event_type'], string> = {
+  chapter_progress: Colors.accent,
+  room_joined:      Colors.gold,
+  chapter_reaction: Colors.danger,
+  book_completed:   Colors.success,
+  user_post:        Colors.accent,
+};
+
+// ─── Shared avatar ────────────────────────────────────────────────────────────
+
+function Avatar({
+  url,
+  username,
+  size = 42,
+  color,
+}: {
+  url?: string | null;
+  username: string;
+  size?: number;
+  color?: string;
+}) {
+  const initials = username.slice(0, 2).toUpperCase();
+  const border   = color ?? Colors.accent;
+  if (url) {
+    return (
+      <Image
+        source={{ uri: url }}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderWidth: 1.5,
+          borderColor: border,
+        }}
+      />
+    );
+  }
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        borderWidth: 1.5,
+        borderColor: border,
+        backgroundColor: border + '22',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Text style={{ color: border, fontSize: size * 0.33, fontWeight: '700' }}>
+        {initials}
+      </Text>
+    </View>
+  );
 }
 
-export function FeedEventCard({ event, cardHeight }: FeedEventCardProps) {
-  const { width: screenWidth } = useWindowDimensions();
-  const avatarUrl = event.users?.avatar_url;
-  const username = event.users?.username ?? '?';
-  const initials = username.slice(0, 2).toUpperCase();
-  const isPost = event.event_type === 'user_post';
+// ─── Twitter-style action row ─────────────────────────────────────────────────
+
+function ActionRow({ liked, onLike }: { liked: boolean; onLike: () => void }) {
+  return (
+    <View style={styles.actionRow}>
+      <TouchableOpacity onPress={onLike} style={styles.actionBtn}>
+        <Ionicons
+          name={liked ? 'heart' : 'heart-outline'}
+          size={18}
+          color={liked ? Colors.danger : Colors.textMuted}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.actionBtn}>
+        <Ionicons name="chatbubble-outline" size={17} color={Colors.textMuted} />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.actionBtn}>
+        <Ionicons name="arrow-redo-outline" size={17} color={Colors.textMuted} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── Activity card (system events) ───────────────────────────────────────────
+
+function ActivityCard({ event }: { event: FeedEvent }) {
   const [liked, setLiked] = useState(false);
-
-  const imageUrl = event.metadata?.image_url ?? event.metadata?.book_cover ?? event.books?.cover_url;
-  const milestoneText = event.metadata?.milestone_text;
-  const milestoneType = event.metadata?.milestone_type;
-  let badgeIcon = '📝';
-  if (milestoneType === 'started') badgeIcon = '📖';
-  if (milestoneType === 'chapter') badgeIcon = '🔖';
-  if (milestoneType === 'completed') badgeIcon = '🏆';
-
-  // The image is a 1:1 square = screenWidth × screenWidth
-  const imageSize = screenWidth;
+  const accent   = EVENT_COLOR[event.event_type];
+  const username = event.users?.username ?? '?';
 
   return (
-    <View style={[styles.card, { height: cardHeight }]}>
-
-      {/* ── Header Row ── */}
-      <View style={styles.header}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.headerAvatar} />
-        ) : (
-          <View style={[styles.headerAvatar, styles.avatarFallback]}>
-            <Text style={styles.avatarInitials}>{initials}</Text>
-          </View>
-        )}
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerUsername}>{username}</Text>
-          {isPost && event.metadata?.book_title && (
-            <Text style={styles.headerSub} numberOfLines={1}>
-              Reading {event.metadata.book_title}
-            </Text>
-          )}
-          {!isPost && (
-            <Text style={styles.headerSub} numberOfLines={1}>
-              {timeAgo(event.created_at)}
-            </Text>
-          )}
-        </View>
-        {isPost && <Text style={styles.headerTime}>{timeAgo(event.created_at)}</Text>}
-        {!isPost && <EventEmoji type={event.event_type} />}
+    <View style={styles.tweetRow}>
+      {/* Left column — avatar + connector line */}
+      <View style={styles.leftCol}>
+        <Avatar url={event.users?.avatar_url} username={username} size={42} color={accent} />
       </View>
 
-      {/* ── 1:1 Image (Post) or Message (System Event) ── */}
-      {isPost ? (
-        <>
-          {imageUrl ? (
-            <View style={[styles.imageContainer, { width: imageSize, height: imageSize }]}>
-              <Image
-                source={{ uri: imageUrl }}
-                style={styles.image}
-                resizeMode="cover"
-              />
-              {milestoneText && (
-                <View style={styles.milestoneBadge}>
-                  <Text style={styles.milestoneText}>{badgeIcon} {milestoneText}</Text>
-                </View>
-              )}
-            </View>
-          ) : (
-            <View style={[styles.imageContainer, styles.imageFallback, { width: imageSize, height: imageSize }]}>
-              <Text style={styles.fallbackEmoji}>📚</Text>
-            </View>
-          )}
-        </>
-      ) : (
-        <View style={styles.systemMessageArea}>
-          <Text style={styles.systemMessage}>{buildMessage(event)}</Text>
-          {event.books?.cover_url && (
+      {/* Right column */}
+      <View style={styles.rightCol}>
+        {/* Name row */}
+        <View style={styles.nameRow}>
+          <Text style={styles.displayName}>{username}</Text>
+          <Text style={styles.dot}> · </Text>
+          <Text style={styles.timestamp}>{timeAgo(event.created_at)}</Text>
+        </View>
+
+        {/* Activity text */}
+        <Text style={styles.tweetBody}>
+          {buildActivityText(event)}
+        </Text>
+
+        {/* Book cover inline chip */}
+        {event.books?.cover_url && (
+          <View style={styles.bookChip}>
             <Image
               source={{ uri: event.books.cover_url }}
-              style={styles.systemCover}
+              style={styles.bookChipCover}
               resizeMode="cover"
             />
-          )}
-        </View>
-      )}
-
-      {/* ── Actions Row ── */}
-      <View style={styles.actions}>
-        <TouchableOpacity onPress={() => setLiked(!liked)} style={styles.actionBtn}>
-          <Ionicons
-            name={liked ? 'heart' : 'heart-outline'}
-            size={28}
-            color={liked ? Colors.danger : Colors.text}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn}>
-          <Ionicons name="chatbubble-outline" size={25} color={Colors.text} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn}>
-          <Ionicons name="paper-plane-outline" size={25} color={Colors.text} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }} />
-        <TouchableOpacity style={styles.actionBtn}>
-          <Ionicons name="bookmark-outline" size={25} color={Colors.text} />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Caption / Book Tag ── */}
-      <View style={styles.captionArea}>
-        {isPost && event.metadata?.caption ? (
-          <Text style={styles.captionText} numberOfLines={2}>
-            <Text style={styles.captionUsername}>{username}</Text>{' '}
-            {event.metadata.caption}
-          </Text>
-        ) : null}
-        {event.metadata?.book_title && !event.metadata?.caption && (
-          <View style={styles.tagRow}>
-            <View style={styles.tag}>
-              <Ionicons name="book-outline" size={12} color={Colors.accent} />
-              <Text style={styles.tagText}>{event.metadata.book_title}</Text>
-            </View>
+            <Text style={styles.bookChipTitle} numberOfLines={1}>
+              {event.books.title ?? event.metadata?.book_title}
+            </Text>
           </View>
         )}
+
+        <ActionRow liked={liked} onLike={() => setLiked(!liked)} />
       </View>
     </View>
   );
 }
 
+// ─── Post card (user_post events) ────────────────────────────────────────────
+
+function PostCard({ event }: { event: FeedEvent }) {
+  const { width: screenWidth } = useWindowDimensions();
+  const [liked, setLiked] = useState(false);
+
+  const username    = event.users?.username ?? '?';
+  const caption     = event.metadata?.caption ?? '';
+  const imageUrl    = event.metadata?.image_url ?? event.metadata?.book_cover ?? event.books?.cover_url;
+  const milestoneText = event.metadata?.milestone_text;
+
+  // Image renders at 4:3 max so landscape images don't dominate
+  const imgWidth  = screenWidth - Spacing.md * 2 - 42 - Spacing.sm; // right-col width
+  const imgHeight = Math.round(imgWidth * 0.75);
+
+  return (
+    <View style={styles.tweetRow}>
+      <View style={styles.leftCol}>
+        <Avatar url={event.users?.avatar_url} username={username} size={42} />
+      </View>
+
+      <View style={styles.rightCol}>
+        {/* Name row */}
+        <View style={styles.nameRow}>
+          <Text style={styles.displayName}>{username}</Text>
+          {event.metadata?.book_title && (
+            <>
+              <Text style={styles.dot}> · </Text>
+              <Text style={styles.bookNameInline} numberOfLines={1}>
+                {event.metadata.book_title}
+              </Text>
+            </>
+          )}
+          <Text style={[styles.dot, { marginLeft: 'auto' }]}> </Text>
+          <Text style={styles.timestamp}>{timeAgo(event.created_at)}</Text>
+        </View>
+
+        {/* Caption */}
+        {caption ? (
+          <Text style={styles.tweetBody}>{caption}</Text>
+        ) : null}
+
+        {/* Milestone badge */}
+        {milestoneText && (
+          <View style={styles.milestonePill}>
+            <Text style={styles.milestonePillText}>{milestoneText}</Text>
+          </View>
+        )}
+
+        {/* Embedded image — constrained height, rounded, NOT full-screen */}
+        {imageUrl && (
+          <View style={[styles.embeddedImage, { width: imgWidth, height: imgHeight }]}>
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.embeddedImageFill}
+              resizeMode="cover"
+            />
+          </View>
+        )}
+
+        <ActionRow liked={liked} onLike={() => setLiked(!liked)} />
+      </View>
+    </View>
+  );
+}
+
+// ─── Public export ────────────────────────────────────────────────────────────
+
+export function FeedEventCard({ event }: { event: FeedEvent }) {
+  if (event.event_type === 'user_post') return <PostCard event={event} />;
+  return <ActivityCard event={event} />;
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.bg,
+  // Twitter two-column layout
+  tweetRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+    gap: Spacing.sm,
+  },
+  leftCol: {
+    width: 42,
+    alignItems: 'center',
+  },
+  rightCol: {
+    flex: 1,
+    gap: 4,
   },
 
-  // ── Header ──
-  header: {
+  // Name / timestamp row
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
+    flexWrap: 'nowrap',
+    overflow: 'hidden',
   },
-  headerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: Colors.accent,
-  },
-  avatarFallback: {
-    backgroundColor: Colors.accentDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitials: {
-    color: Colors.accent,
-    fontSize: FontSize.xs,
-    fontWeight: '700',
-  },
-  headerInfo: {
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  headerUsername: {
+  displayName: {
     color: Colors.text,
     fontSize: FontSize.md,
-    fontWeight: '700',
-  },
-  headerSub: {
-    color: Colors.textMuted,
-    fontSize: FontSize.xs,
-    marginTop: 1,
-  },
-  headerTime: {
-    color: Colors.textMuted,
-    fontSize: FontSize.xs,
-  },
-
-  // ── Image ──
-  imageContainer: {
-    backgroundColor: Colors.surface,
-    position: 'relative',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  imageFallback: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.surface,
-  },
-  fallbackEmoji: {
-    fontSize: 64,
-    opacity: 0.3,
-  },
-  milestoneBadge: {
-    position: 'absolute',
-    bottom: Spacing.sm,
-    left: Spacing.sm,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radii.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  milestoneText: {
-    color: '#fff',
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-  },
-
-  // ── System Event ──
-  systemMessageArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
-    gap: Spacing.lg,
-  },
-  systemMessage: {
-    color: Colors.text,
-    fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
-    textAlign: 'center',
-    lineHeight: 28,
+    flexShrink: 1,
   },
-  systemCover: {
-    width: 120,
-    height: 180,
-    borderRadius: Radii.md,
+  dot: {
+    color: Colors.textMuted,
+    fontSize: FontSize.md,
   },
-
-  // ── Actions ──
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.xs,
-    gap: Spacing.md,
+  timestamp: {
+    color: Colors.textMuted,
+    fontSize: FontSize.sm,
+    flexShrink: 0,
   },
-  actionBtn: {
-    padding: 2,
+  bookNameInline: {
+    color: Colors.accent,
+    fontSize: FontSize.sm,
+    flexShrink: 1,
+    maxWidth: 120,
   },
 
-  // ── Caption ──
-  captionArea: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.sm,
-  },
-  captionText: {
+  // Tweet body text
+  tweetBody: {
     color: Colors.text,
     fontSize: FontSize.md,
     lineHeight: 22,
   },
-  captionUsername: {
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.xs,
-  },
-  tag: {
+
+  // Book chip (activity cards)
+  bookChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.accentDim,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
+    gap: Spacing.xs,
+    backgroundColor: Colors.surface,
     borderRadius: Radii.sm,
-    gap: 4,
+    borderWidth: 1,
+    borderColor: Colors.surfaceBorder,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+    maxWidth: '90%',
   },
-  tagText: {
+  bookChipCover: {
+    width: 20,
+    height: 28,
+    borderRadius: 2,
+  },
+  bookChipTitle: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    flexShrink: 1,
+  },
+
+  // Milestone pill (posts)
+  milestonePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.accentDim,
+    borderRadius: Radii.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: Colors.accent + '50',
+  },
+  milestonePillText: {
     color: Colors.accent,
     fontSize: FontSize.xs,
-    fontWeight: '600',
+    fontWeight: FontWeight.semibold,
+  },
+
+  // Embedded image (posts)
+  embeddedImage: {
+    borderRadius: Radii.md,
+    overflow: 'hidden',
+    marginTop: Spacing.xs,
+  },
+  embeddedImageFill: {
+    width: '100%',
+    height: '100%',
+  },
+
+  // Actions
+  actionRow: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
+    marginTop: Spacing.xs,
+  },
+  actionBtn: {
+    padding: 2,
   },
 });

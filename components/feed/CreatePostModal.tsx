@@ -76,6 +76,24 @@ export function CreatePostModal({ visible, onClose, onPostSuccess }: Props) {
     }
   }
 
+  async function takePhoto() {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow camera access in your device settings to take a photo.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setImageUri(result.assets[0].uri);
+      setImageBase64(result.assets[0].base64 ?? null);
+    }
+  }
+
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -84,7 +102,6 @@ export function CreatePostModal({ visible, onClose, onPostSuccess }: Props) {
       quality: 0.7,
       base64: true,
     });
-
     if (!result.canceled && result.assets[0]) {
       setImageUri(result.assets[0].uri);
       setImageBase64(result.assets[0].base64 ?? null);
@@ -245,11 +262,16 @@ export function CreatePostModal({ visible, onClose, onPostSuccess }: Props) {
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity style={styles.uploadBtn} onPress={pickImage} activeOpacity={0.7}>
-                  <Ionicons name="camera" size={32} color={Colors.accent} />
-                  <Text style={styles.uploadBtnText}>Add a Photo</Text>
-                  <Text style={styles.uploadBtnSub}>(optional)</Text>
-                </TouchableOpacity>
+                <View style={styles.uploadRow}>
+                  <TouchableOpacity style={styles.uploadBtn} onPress={takePhoto} activeOpacity={0.7}>
+                    <Ionicons name="camera" size={28} color={Colors.accent} />
+                    <Text style={styles.uploadBtnText}>Camera</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.uploadBtn} onPress={pickImage} activeOpacity={0.7}>
+                    <Ionicons name="image" size={28} color={Colors.accentLight} />
+                    <Text style={[styles.uploadBtnText, { color: Colors.accentLight }]}>Library</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
 
@@ -365,9 +387,14 @@ const styles = StyleSheet.create({
   mediaSection: {
     alignItems: 'center',
   },
-  uploadBtn: {
+  uploadRow: {
+    flexDirection: 'row',
     width: '100%',
-    aspectRatio: 2, // shorter rectangle instead of full square
+    gap: Spacing.sm,
+  },
+  uploadBtn: {
+    flex: 1,
+    aspectRatio: 1.6,
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.surfaceBorder,
@@ -379,12 +406,8 @@ const styles = StyleSheet.create({
   },
   uploadBtnText: {
     color: Colors.accent,
-    fontWeight: 'bold',
+    fontWeight: FontWeight.bold,
     fontSize: FontSize.md,
-  },
-  uploadBtnSub: {
-    color: Colors.textMuted,
-    fontSize: FontSize.xs,
   },
   imageContainer: {
     width: '100%',

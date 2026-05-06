@@ -15,7 +15,7 @@ interface ChapterTrackerProps {
 export function ChapterTracker({ roomId, bookId }: ChapterTrackerProps) {
   const [saving, setSaving] = React.useState(false);
   const [quizVisible, setQuizVisible] = useState(false);
-  const { session } = useAuthStore();
+  const { session, appUser, fetchAppUser } = useAuthStore();
   const { book, myProgress, setMyProgress } = useRoomStore();
 
   const chapter = myProgress?.current_chapter ?? 0;
@@ -54,6 +54,25 @@ export function ChapterTracker({ roomId, bookId }: ChapterTrackerProps) {
           book_title: book?.title,
         },
       });
+
+      // Streak tracking — only runs once per calendar day
+      const today = new Date().toDateString();
+      const lastReadDay = appUser?.last_read_at
+        ? new Date(appUser.last_read_at).toDateString()
+        : null;
+
+      if (lastReadDay !== today) {
+        const yesterday = new Date(Date.now() - 86_400_000).toDateString();
+        const currentStreak = appUser?.streak_days ?? 0;
+        const newStreak = lastReadDay === yesterday ? currentStreak + 1 : 1;
+
+        await supabase
+          .from('users')
+          .update({ last_read_at: new Date().toISOString(), streak_days: newStreak })
+          .eq('id', session.user.id);
+
+        await fetchAppUser(session.user.id);
+      }
     }
     setSaving(false);
   }
