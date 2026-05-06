@@ -65,11 +65,16 @@ export default function ProfileScreen() {
 
   async function loadBooks() {
     if (!session) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('reading_progress')
       .select('book_id, current_chapter, status, is_completed, updated_at, books(title, cover_url, author)')
       .eq('user_id', session.user.id)
       .order('updated_at', { ascending: false });
+    if (error) {
+      console.error('[Profile] loadBooks error:', error.message);
+      Alert.alert('Error loading books', error.message);
+      return;
+    }
     if (data) setEntries(data as unknown as ReadingEntry[]);
   }
 

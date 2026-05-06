@@ -104,6 +104,15 @@ export default function ReadingRoomScreen() {
         .maybeSingle();
 
       if (!existingProgress) {
+        // Create progress row immediately so the book appears on the profile
+        await supabase.from('reading_progress').insert({
+          user_id: session!.user.id,
+          room_id: roomData.id,
+          book_id: gbBook.id,
+          current_chapter: 0,
+          status: 'reading',
+        });
+
         await supabase.from('feed_events').insert({
           user_id: session!.user.id,
           event_type: 'room_joined',

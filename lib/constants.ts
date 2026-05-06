@@ -1,119 +1,121 @@
 // Design system tokens for The Reading Gym
-// Carnival theme - fire orange x gold x hot pink
+// Theme: Black & Gold — premium, dark, editorial
 
-const CarnivalPalette = {
+const Palette = {
   bg: {
-    base:    '#16060a',
-    surface: '#2a0d10',
-    card:    'rgba(232,83,26,0.13)',
+    base:    '#0C0C0C',   // near-black
+    surface: '#181818',   // dark card
+    card:    'rgba(201,168,76,0.08)', // gold-tinted surface
   },
-  accent: {
-    fire:   '#e8531a',
-    gold:   '#f0b429',
-    pink:   '#d4537e',
+  gold: {
+    vivid:  '#F0C040',   // bright gold — XP, streaks, highlights
+    rich:   '#C9A84C',   // primary gold — buttons, accents
+    deep:   '#8B6B14',   // dark gold — pressed states, gradients
+    dim:    'rgba(201,168,76,0.12)',
+    glow:   'rgba(201,168,76,0.30)',
+    border: 'rgba(201,168,76,0.25)',
   },
   text: {
-    primary:   '#faf7f2',
-    fire:      '#ff9d6e',
-    gold:      '#ffd97d',
-    pink:      '#ed93b1',
-    muted:     'rgba(250,247,242,0.45)',
+    primary: '#F7F3ED',  // warm off-white
+    muted:   'rgba(247,243,237,0.45)',
+    faint:   'rgba(247,243,237,0.22)',
   },
-  border: {
-    fire:   'rgba(232,83,26,0.4)',
-    gold:   'rgba(240,180,41,0.35)',
-    pink:   'rgba(212,83,126,0.35)',
+  status: {
+    success:    '#4ADE80',
+    successDim: 'rgba(74,222,128,0.15)',
+    danger:     '#E05555',
+    dangerDim:  'rgba(224,85,85,0.15)',
   },
-  xpGradient: ['#e8531a', '#f0b429', '#d4537e'] as const,
-  statColors: ['fire', 'gold', 'pink'],
 };
 
 export const Colors = {
-  ...CarnivalPalette, // for new components
-  
-  // Backgrounds
-  bg: CarnivalPalette.bg.base,
-  surface: CarnivalPalette.bg.surface,
-  surfaceRaised: CarnivalPalette.bg.card,
-  surfaceBorder: CarnivalPalette.border.fire,
+  // ── Backgrounds ──────────────────────────────────────────────
+  bg:            Palette.bg.base,
+  surface:       Palette.bg.surface,
+  surfaceRaised: Palette.bg.card,
+  surfaceBorder: Palette.gold.border,
 
-  // Accent / Brand
-  accent: CarnivalPalette.accent.fire,
-  accentLight: CarnivalPalette.accent.gold,
-  accentDim: 'rgba(232,83,26,0.15)',
-  accentGlow: 'rgba(232,83,26,0.35)',
+  // ── Primary accent (gold) ────────────────────────────────────
+  accent:        Palette.gold.rich,
+  accentLight:   Palette.gold.vivid,
+  accentDim:     Palette.gold.dim,
+  accentGlow:    Palette.gold.glow,
 
-  // Gold for XP / streaks
-  gold: CarnivalPalette.accent.gold,
-  goldDim: 'rgba(240,180,41,0.15)',
+  // ── Gold (XP / streaks — same family, brighter) ──────────────
+  gold:          Palette.gold.vivid,
+  goldDim:       Palette.gold.dim,
 
-  // Semantic
-  success: '#4ADE80',
-  successDim: 'rgba(74,222,128,0.15)',
-  danger: CarnivalPalette.accent.pink,
-  dangerDim: 'rgba(212,83,126,0.15)',
-  warning: CarnivalPalette.accent.gold,
+  // ── Semantic ─────────────────────────────────────────────────
+  success:       Palette.status.success,
+  successDim:    Palette.status.successDim,
+  danger:        Palette.status.danger,
+  dangerDim:     Palette.status.dangerDim,
+  warning:       Palette.gold.vivid,
 
-  // Text
-  text: CarnivalPalette.text.primary,
-  textSecondary: CarnivalPalette.text.muted,
-  textMuted: CarnivalPalette.text.muted,
-  textDisabled: 'rgba(250,247,242,0.25)',
+  // ── Text ─────────────────────────────────────────────────────
+  text:          Palette.text.primary,
+  textSecondary: Palette.text.muted,
+  textMuted:     Palette.text.muted,
+  textDisabled:  Palette.text.faint,
 
-  // Intensity colors (for spoiler-safe reactions)
-  intensityStrong: CarnivalPalette.accent.fire,
-  intensityModerate: CarnivalPalette.accent.pink,
-  intensityMild: CarnivalPalette.accent.gold,
+  // ── Reaction accent colours ───────────────────────────────────
+  // All within the gold family so nothing clashes with the theme.
+  intensityStrong:   Palette.gold.vivid,
+  intensityModerate: Palette.gold.rich,
+  intensityMild:     Palette.gold.deep,
 
-  // Tab bar
-  tabActive: CarnivalPalette.accent.fire,
-  tabInactive: CarnivalPalette.text.muted,
+  // ── Tab bar ──────────────────────────────────────────────────
+  tabActive:   Palette.gold.rich,
+  tabInactive: Palette.text.muted,
+
+  // ── XP gradient (dark gold → vivid gold) ─────────────────────
+  xpGradient: [Palette.gold.deep, Palette.gold.rich, Palette.gold.vivid] as const,
 };
 
 export const Spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
+  xs:  4,
+  sm:  8,
+  md:  16,
+  lg:  24,
+  xl:  32,
   xxl: 48,
 };
 
 export const Radii = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
+  sm:   8,
+  md:   12,
+  lg:   16,
+  xl:   24,
   full: 9999,
 };
 
 export const FontSize = {
-  xs: 11,
-  sm: 13,
-  md: 15,
-  lg: 17,
-  xl: 20,
-  xxl: 24,
-  xxxl: 30,
+  xs:      11,
+  sm:      13,
+  md:      15,
+  lg:      17,
+  xl:      20,
+  xxl:     24,
+  xxxl:    30,
   display: 38,
 };
 
 export const FontWeight = {
-  regular: '400' as const,
-  medium: '500' as const,
-  semibold: '600' as const,
-  bold: '700' as const,
+  regular:   '400' as const,
+  medium:    '500' as const,
+  semibold:  '600' as const,
+  bold:      '700' as const,
   extrabold: '800' as const,
 };
 
-// Reaction types and their properties
+// Reaction chips — all gold shades so they feel cohesive
 export const REACTIONS = [
-  { type: 'twist',     emoji: '😱', label: 'Plot Twist',    intensity: 'strong' },
-  { type: 'favorite',  emoji: '🔥', label: 'Favorite Scene', intensity: 'mild' },
-  { type: 'emotional', emoji: '😭', label: 'Emotional',     intensity: 'moderate' },
+  { type: 'twist',     emoji: '😱', label: 'Plot Twist',     intensity: 'strong'   },
+  { type: 'favorite',  emoji: '🔥', label: 'Favorite Scene', intensity: 'mild'     },
+  { type: 'emotional', emoji: '😭', label: 'Emotional',       intensity: 'moderate' },
 ] as const;
 
-export type ReactionType = typeof REACTIONS[number]['type'];
+export type ReactionType      = typeof REACTIONS[number]['type'];
 export type ReactionIntensity = 'strong' | 'moderate' | 'mild';
 
 export const INTENSITY_LABELS: Record<ReactionIntensity, string> = {
@@ -122,9 +124,8 @@ export const INTENSITY_LABELS: Record<ReactionIntensity, string> = {
   mild:     'Notable',
 };
 
-// Map the new chip colors as requested by the user
 export const CHIP_COLORS: Record<ReactionType, string> = {
-  twist:     CarnivalPalette.accent.fire,
-  favorite:  CarnivalPalette.accent.gold,
-  emotional: CarnivalPalette.accent.pink,
+  twist:     Palette.gold.vivid,
+  favorite:  Palette.gold.rich,
+  emotional: Palette.gold.deep,
 };
