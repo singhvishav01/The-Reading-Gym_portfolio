@@ -252,4 +252,4 @@ The app uses a **black & gold** token system defined in `lib/constants.ts`. All 
 
 ## License
 
-MIT — feel free to fork and build on it.
+Vishavpreet Singh 2026
